@@ -1,0 +1,32 @@
+/**
+ * Admin styles for Security & Comments Lite Tweaks
+ *
+ * @package SecurityCommentsLiteTweaks
+ * @since   1.0.0
+ */
+
+/* Keep admin styling minimal and clean */
+.sclt-admin-page h2 {
+	margin-top: 2em;
+	padding-top: 1em;
+	border-top: 1px solid #dcdcde;
+}
+
+.sclt-admin-page h2:first-of-type {
+	margin-top: 1em;
+	padding-top: 0;
+	border-top: none;
+}
+
+.sclt-admin-page .form-table th {
+	padding-left: 0;
+}
+
+.sclt-admin-page .form-table td label {
+	font-weight: 500;
+}
+
+.sclt-admin-page .description {
+	margin-top: 8px;
+	font-style: italic;
+}
