@@ -187,6 +187,20 @@ class SCLT_Admin {
 	}
 
 	/**
+	 * Gets a setting value safely with default
+	 *
+	 * @since 1.0.0
+	 *
+	 * @param array  $settings Settings array
+	 * @param string $key      Setting key
+	 * @param string $default  Default value
+	 * @return string Setting value
+	 */
+	private function get_setting_value( $settings, $key, $default = '0' ) {
+		return isset( $settings[ $key ] ) ? $settings[ $key ] : $default;
+	}
+
+	/**
 	 * Renders the admin settings page
 	 *
 	 * @since 1.0.0
@@ -198,10 +212,13 @@ class SCLT_Admin {
 		}
 
 		// Display notices
-		if ( $notices = get_transient( 'sclt_admin_notices' ) ) {
+		$notices = get_transient( 'sclt_admin_notices' );
+		if ( is_array( $notices ) ) {
 			delete_transient( 'sclt_admin_notices' );
 			foreach ( $notices as $notice ) {
-				echo '<div class="notice notice-' . esc_attr( $notice['type'] ) . ' is-dismissible"><p>' . esc_html( $notice['message'] ) . '</p></div>';
+				if ( isset( $notice['type'] ) && isset( $notice['message'] ) ) {
+					echo '<div class="notice notice-' . esc_attr( $notice['type'] ) . ' is-dismissible"><p>' . esc_html( $notice['message'] ) . '</p></div>';
+				}
 			}
 		}
 
@@ -219,7 +236,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Hide WordPress Version', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="hide_wp_version" value="1" <?php checked( '1', $settings['hide_wp_version'] ?? '0' ); ?>>
+								<input type="checkbox" name="hide_wp_version" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'hide_wp_version' ) ); ?>>
 								<?php esc_html_e( 'Removes WordPress version number from HTML source for security', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -228,7 +245,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Disable Generator Meta Tag', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="disable_generator_meta" value="1" <?php checked( '1', $settings['disable_generator_meta'] ?? '0' ); ?>>
+								<input type="checkbox" name="disable_generator_meta" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'disable_generator_meta' ) ); ?>>
 								<?php esc_html_e( 'Removes generator meta tag from page head', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -237,7 +254,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Remove Script/Style Versions', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="remove_script_versions" value="1" <?php checked( '1', $settings['remove_script_versions'] ?? '0' ); ?>>
+								<input type="checkbox" name="remove_script_versions" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'remove_script_versions' ) ); ?>>
 								<?php esc_html_e( 'Removes version parameters from CSS/JS files for better caching', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -246,7 +263,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Disable Application Passwords', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="disable_app_passwords" value="1" <?php checked( '1', $settings['disable_app_passwords'] ?? '0' ); ?>>
+								<input type="checkbox" name="disable_app_passwords" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'disable_app_passwords' ) ); ?>>
 								<?php esc_html_e( 'Disables WordPress application passwords feature for enhanced security', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -255,7 +272,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Disable Code Editors', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="disable_code_editors" value="1" <?php checked( '1', $settings['disable_code_editors'] ?? '0' ); ?>>
+								<input type="checkbox" name="disable_code_editors" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'disable_code_editors' ) ); ?>>
 								<?php esc_html_e( 'Removes file and plugin editor from admin for security', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -264,7 +281,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Disable Admin Email Confirmation', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="disable_admin_email_check" value="1" <?php checked( '1', $settings['disable_admin_email_check'] ?? '0' ); ?>>
+								<input type="checkbox" name="disable_admin_email_check" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'disable_admin_email_check' ) ); ?>>
 								<?php esc_html_e( 'Removes the admin email verification prompt', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -277,7 +294,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Optimize Comment Scripts', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="optimize_comment_scripts" value="1" <?php checked( '1', $settings['optimize_comment_scripts'] ?? '0' ); ?>>
+								<input type="checkbox" name="optimize_comment_scripts" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'optimize_comment_scripts' ) ); ?>>
 								<?php esc_html_e( 'Only load comment reply scripts when comments are enabled and open', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -286,7 +303,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Disable Comment Hyperlinks', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="disable_comment_links" value="1" <?php checked( '1', $settings['disable_comment_links'] ?? '0' ); ?>>
+								<input type="checkbox" name="disable_comment_links" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'disable_comment_links' ) ); ?>>
 								<?php esc_html_e( 'Prevents automatic URL linking in comments for security and spam prevention', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -295,7 +312,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Disable Trackbacks & Pingbacks', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="disable_trackbacks" value="1" <?php checked( '1', $settings['disable_trackbacks'] ?? '0' ); ?>>
+								<input type="checkbox" name="disable_trackbacks" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'disable_trackbacks' ) ); ?>>
 								<?php esc_html_e( 'Disables automatic notifications when linking to other sites', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -304,7 +321,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Disable Comments Site-wide', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="disable_comments" value="1" <?php checked( '1', $settings['disable_comments'] ?? '0' ); ?>>
+								<input type="checkbox" name="disable_comments" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'disable_comments' ) ); ?>>
 								<?php esc_html_e( 'Completely removes comment functionality from your entire site', 'security-comments-lite-tweaks' ); ?>
 							</label>
 						</td>
@@ -317,7 +334,7 @@ class SCLT_Admin {
 						<th scope="row"><?php esc_html_e( 'Cleanup on Uninstall', 'security-comments-lite-tweaks' ); ?></th>
 						<td>
 							<label>
-								<input type="checkbox" name="cleanup_on_uninstall" value="1" <?php checked( '1', $settings['cleanup_on_uninstall'] ?? '1' ); ?>>
+								<input type="checkbox" name="cleanup_on_uninstall" value="1" <?php checked( '1', $this->get_setting_value( $settings, 'cleanup_on_uninstall', '1' ) ); ?>>
 								<?php esc_html_e( 'Remove all plugin data when uninstalling', 'security-comments-lite-tweaks' ); ?>
 							</label>
 							<p class="description">
