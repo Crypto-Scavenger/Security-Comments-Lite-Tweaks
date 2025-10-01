@@ -23,7 +23,12 @@ class SCLT_Database {
 	 * @since 1.0.0
 	 */
 	public static function activate() {
-		self::create_table();
+		$result = self::create_table();
+		if ( is_wp_error( $result ) ) {
+			error_log( 'SCLT Activation Error: ' . $result->get_error_message() );
+			return;
+		}
+		
 		self::set_default_settings();
 	}
 
@@ -41,6 +46,7 @@ class SCLT_Database {
 	 * Creates the custom settings table
 	 *
 	 * @since 1.0.0
+	 * @return bool|WP_Error True on success, WP_Error on failure
 	 */
 	private static function create_table() {
 		global $wpdb;
@@ -48,16 +54,38 @@ class SCLT_Database {
 		$table_name = $wpdb->prefix . SCLT_TABLE_SETTINGS;
 		$charset_collate = $wpdb->get_charset_collate();
 		
-		$sql = "CREATE TABLE IF NOT EXISTS `{$table_name}` (
-			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-			setting_key varchar(191) NOT NULL,
-			setting_value varchar(10) NOT NULL DEFAULT '0',
-			PRIMARY KEY (id),
-			UNIQUE KEY setting_key (setting_key)
-		) {$charset_collate};";
+		// Use prepared statement with %i placeholder for WordPress 6.2+
+		$sql = $wpdb->prepare(
+			"CREATE TABLE IF NOT EXISTS %i (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				setting_key varchar(191) NOT NULL,
+				setting_value varchar(10) NOT NULL DEFAULT '0',
+				PRIMARY KEY (id),
+				UNIQUE KEY setting_key (setting_key)
+			) %s",
+			$table_name,
+			$charset_collate
+		);
 		
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
+		
+		// Verify table was created successfully
+		$table_exists = $wpdb->get_var(
+			$wpdb->prepare(
+				"SHOW TABLES LIKE %s",
+				$table_name
+			)
+		);
+		
+		if ( $table_name !== $table_exists ) {
+			return new WP_Error(
+				'table_creation_failed',
+				__( 'Failed to create database table', 'security-comments-lite-tweaks' )
+			);
+		}
+		
+		return true;
 	}
 
 	/**
@@ -84,7 +112,10 @@ class SCLT_Database {
 		foreach ( $defaults as $key => $value ) {
 			$existing = $database->get_setting( $key );
 			if ( false === $existing ) {
-				$database->save_setting( $key, $value );
+				$result = $database->save_setting( $key, $value );
+				if ( is_wp_error( $result ) ) {
+					error_log( 'SCLT: Failed to set default for ' . $key . ' - ' . $result->get_error_message() );
+				}
 			}
 		}
 	}
@@ -104,10 +135,15 @@ class SCLT_Database {
 		
 		$result = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT setting_value FROM `{$table}` WHERE setting_key = %s",
+				"SELECT setting_value FROM %i WHERE setting_key = %s",
+				$table,
 				$key
 			)
 		);
+		
+		if ( null === $result ) {
+			return false;
+		}
 		
 		return $result;
 	}
@@ -126,13 +162,14 @@ class SCLT_Database {
 		
 		$table = $wpdb->prefix . SCLT_TABLE_SETTINGS;
 		
-		$result = $wpdb->replace(
-			$table,
-			array(
-				'setting_key' => $key,
-				'setting_value' => $value,
-			),
-			array( '%s', '%s' )
+		// Use direct query with prepare since replace() doesn't support %i
+		$result = $wpdb->query(
+			$wpdb->prepare(
+				"REPLACE INTO %i (setting_key, setting_value) VALUES (%s, %s)",
+				$table,
+				$key,
+				$value
+			)
 		);
 		
 		if ( false === $result ) {
@@ -156,7 +193,7 @@ class SCLT_Database {
 	public function get_all_settings() {
 		$cached = get_transient( 'sclt_settings_cache' );
 		
-		if ( false !== $cached ) {
+		if ( false !== $cached && is_array( $cached ) ) {
 			return $cached;
 		}
 		
@@ -165,14 +202,24 @@ class SCLT_Database {
 		$table = $wpdb->prefix . SCLT_TABLE_SETTINGS;
 		
 		$results = $wpdb->get_results(
-			"SELECT setting_key, setting_value FROM `{$table}`",
+			$wpdb->prepare(
+				"SELECT setting_key, setting_value FROM %i",
+				$table
+			),
 			ARRAY_A
 		);
 		
+		if ( null === $results ) {
+			error_log( 'SCLT: Failed to retrieve settings - ' . $wpdb->last_error );
+			return array();
+		}
+		
 		$settings = array();
-		if ( $results ) {
+		if ( is_array( $results ) ) {
 			foreach ( $results as $row ) {
-				$settings[ $row['setting_key'] ] = $row['setting_value'];
+				if ( isset( $row['setting_key'] ) && isset( $row['setting_value'] ) ) {
+					$settings[ $row['setting_key'] ] = $row['setting_value'];
+				}
 			}
 		}
 		
