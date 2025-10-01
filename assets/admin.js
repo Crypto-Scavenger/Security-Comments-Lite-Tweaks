@@ -9,9 +9,9 @@
 	'use strict';
 
 	$(document).ready(function() {
-		// Auto-dismiss notices after 5 seconds
+		// Auto-dismiss only our plugin's notices after 5 seconds
 		setTimeout(function() {
-			$('.notice.is-dismissible').fadeOut();
+			$('.sclt-admin-page .notice.is-dismissible').fadeOut();
 		}, 5000);
 	});
 
