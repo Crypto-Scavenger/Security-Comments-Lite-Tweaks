@@ -54,18 +54,14 @@ class SCLT_Database {
 		$table_name = $wpdb->prefix . SCLT_TABLE_SETTINGS;
 		$charset_collate = $wpdb->get_charset_collate();
 		
-		// Use prepared statement with %i placeholder for WordPress 6.2+
-		$sql = $wpdb->prepare(
-			"CREATE TABLE IF NOT EXISTS %i (
-				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
-				setting_key varchar(191) NOT NULL,
-				setting_value varchar(10) NOT NULL DEFAULT '0',
-				PRIMARY KEY (id),
-				UNIQUE KEY setting_key (setting_key)
-			) %s",
-			$table_name,
-			$charset_collate
-		);
+		// FIXED: Don't use %s for charset_collate, concatenate directly
+		$sql = "CREATE TABLE IF NOT EXISTS `{$table_name}` (
+			id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+			setting_key varchar(191) NOT NULL,
+			setting_value varchar(10) NOT NULL DEFAULT '0',
+			PRIMARY KEY (id),
+			UNIQUE KEY setting_key (setting_key)
+		) {$charset_collate};";
 		
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 		dbDelta( $sql );
@@ -135,8 +131,7 @@ class SCLT_Database {
 		
 		$result = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT setting_value FROM %i WHERE setting_key = %s",
-				$table,
+				"SELECT setting_value FROM `{$table}` WHERE setting_key = %s",
 				$key
 			)
 		);
@@ -162,11 +157,10 @@ class SCLT_Database {
 		
 		$table = $wpdb->prefix . SCLT_TABLE_SETTINGS;
 		
-		// Use direct query with prepare since replace() doesn't support %i
+		// Use direct query with prepare since replace() doesn't support %i in older WP
 		$result = $wpdb->query(
 			$wpdb->prepare(
-				"REPLACE INTO %i (setting_key, setting_value) VALUES (%s, %s)",
-				$table,
+				"REPLACE INTO `{$table}` (setting_key, setting_value) VALUES (%s, %s)",
 				$key,
 				$value
 			)
@@ -184,11 +178,11 @@ class SCLT_Database {
 	}
 
 	/**
-	 * Gets all settings
+	 * Gets all settings with defaults
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return array Settings array
+	 * @return array Settings array with defaults
 	 */
 	public function get_all_settings() {
 		$cached = get_transient( 'sclt_settings_cache' );
@@ -202,19 +196,31 @@ class SCLT_Database {
 		$table = $wpdb->prefix . SCLT_TABLE_SETTINGS;
 		
 		$results = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT setting_key, setting_value FROM %i",
-				$table
-			),
+			"SELECT setting_key, setting_value FROM `{$table}`",
 			ARRAY_A
+		);
+		
+		// Default values to prevent undefined array key errors
+		$defaults = array(
+			'hide_wp_version' => '0',
+			'disable_generator_meta' => '0',
+			'remove_script_versions' => '0',
+			'disable_app_passwords' => '0',
+			'disable_code_editors' => '0',
+			'disable_admin_email_check' => '0',
+			'optimize_comment_scripts' => '0',
+			'disable_comment_links' => '0',
+			'disable_trackbacks' => '0',
+			'disable_comments' => '0',
+			'cleanup_on_uninstall' => '1'
 		);
 		
 		if ( null === $results ) {
 			error_log( 'SCLT: Failed to retrieve settings - ' . $wpdb->last_error );
-			return array();
+			return $defaults; // Return defaults on error
 		}
 		
-		$settings = array();
+		$settings = $defaults; // Start with defaults
 		if ( is_array( $results ) ) {
 			foreach ( $results as $row ) {
 				if ( isset( $row['setting_key'] ) && isset( $row['setting_value'] ) ) {
