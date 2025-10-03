@@ -52,58 +52,60 @@ class SCLT_Core {
 		$settings = $this->get_settings();
 
 		// Hide WordPress Version
-		if ( '1' === $this->get_setting_value( $settings, 'hide_wp_version' ) ) {
+		if ( '1' === $settings['hide_wp_version'] ) {
 			remove_action( 'wp_head', 'wp_generator' );
 			add_filter( 'the_generator', '__return_empty_string' );
 		}
 
-		// Disable Generator Meta Tag
-		if ( '1' === $this->get_setting_value( $settings, 'disable_generator_meta' ) ) {
+		// Disable Generator Meta Tag - Enhanced to remove ALL generator tags
+		if ( '1' === $settings['disable_generator_meta'] ) {
 			remove_action( 'wp_head', 'wp_generator' );
+			add_action( 'wp_head', array( $this, 'start_generator_buffer' ), -9999 );
+			add_action( 'wp_head', array( $this, 'end_generator_buffer' ), 9999 );
 		}
 
 		// Remove Script/Style Versions
-		if ( '1' === $this->get_setting_value( $settings, 'remove_script_versions' ) ) {
+		if ( '1' === $settings['remove_script_versions'] ) {
 			add_filter( 'style_loader_src', array( $this, 'remove_version_parameter' ), 9999 );
 			add_filter( 'script_loader_src', array( $this, 'remove_version_parameter' ), 9999 );
 		}
 
 		// Disable Application Passwords
-		if ( '1' === $this->get_setting_value( $settings, 'disable_app_passwords' ) ) {
+		if ( '1' === $settings['disable_app_passwords'] ) {
 			add_filter( 'wp_is_application_passwords_available', '__return_false' );
 		}
 
 		// Disable Code Editors
-		if ( '1' === $this->get_setting_value( $settings, 'disable_code_editors' ) ) {
+		if ( '1' === $settings['disable_code_editors'] ) {
 			if ( ! defined( 'DISALLOW_FILE_EDIT' ) ) {
 				define( 'DISALLOW_FILE_EDIT', true );
 			}
 		}
 
 		// Disable Admin Email Confirmation
-		if ( '1' === $this->get_setting_value( $settings, 'disable_admin_email_check' ) ) {
+		if ( '1' === $settings['disable_admin_email_check'] ) {
 			add_filter( 'admin_email_check_interval', '__return_false' );
 		}
 
 		// Optimize Comment Scripts
-		if ( '1' === $this->get_setting_value( $settings, 'optimize_comment_scripts' ) ) {
+		if ( '1' === $settings['optimize_comment_scripts'] ) {
 			add_action( 'wp_enqueue_scripts', array( $this, 'optimize_comment_scripts' ), 100 );
 		}
 
 		// Disable Comment Hyperlinks
-		if ( '1' === $this->get_setting_value( $settings, 'disable_comment_links' ) ) {
+		if ( '1' === $settings['disable_comment_links'] ) {
 			remove_filter( 'comment_text', 'make_clickable', 9 );
 		}
 
 		// Disable Trackbacks & Pingbacks
-		if ( '1' === $this->get_setting_value( $settings, 'disable_trackbacks' ) ) {
+		if ( '1' === $settings['disable_trackbacks'] ) {
 			add_filter( 'pings_open', '__return_false', 9999 );
 			add_filter( 'xmlrpc_methods', array( $this, 'disable_pingback_xmlrpc' ) );
 			add_action( 'wp_head', array( $this, 'remove_x_pingback' ) );
 		}
 
 		// Disable Comments Site-wide
-		if ( '1' === $this->get_setting_value( $settings, 'disable_comments' ) ) {
+		if ( '1' === $settings['disable_comments'] ) {
 			$this->disable_comments_completely();
 		}
 	}
@@ -123,17 +125,26 @@ class SCLT_Core {
 	}
 
 	/**
-	 * Gets a setting value safely with default fallback
+	 * Start output buffering to capture generator meta tags
 	 *
 	 * @since 1.0.0
-	 *
-	 * @param array  $settings Settings array
-	 * @param string $key      Setting key
-	 * @param string $default  Default value
-	 * @return string Setting value
 	 */
-	private function get_setting_value( $settings, $key, $default = '0' ) {
-		return isset( $settings[ $key ] ) ? $settings[ $key ] : $default;
+	public function start_generator_buffer() {
+		ob_start();
+	}
+
+	/**
+	 * End output buffering and filter out all generator meta tags
+	 *
+	 * @since 1.0.0
+	 */
+	public function end_generator_buffer() {
+		$content = ob_get_clean();
+		
+		// Remove all generator meta tags (WordPress, plugins, themes)
+		$content = preg_replace( '/<meta\s+name=["\']generator["\']\s+content=["\'][^"\']*["\']\s*\/?>/i', '', $content );
+		
+		echo $content;
 	}
 
 	/**
